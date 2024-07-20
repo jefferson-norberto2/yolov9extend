@@ -13,12 +13,12 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 from models.common import DetectMultiBackend
 from utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadScreenshots, LoadStreams
-from utils.general import (LOGGER, Profile, check_file, check_img_size, check_imshow, check_requirements, colorstr, cv2,
-                           increment_path, non_max_suppression, print_args, scale_boxes, strip_optimizer, xyxy2xywh)
+from utils.general import (LOGGER, Profile, check_file, check_img_size, check_imshow, colorstr, cv2,
+                           increment_path, non_max_suppression, scale_boxes, strip_optimizer, xyxy2xywh)
 from utils.plots import Annotator, colors, save_one_box
-from utils.torch_utils import select_device, smart_inference_mode
+from utils.torch_utils import smart_inference_mode
 
-class YOLOv9Extend():
+class YOLOv9Extend:
     def __init__(self, weights, device = 'cpu', dnn=False, data=None, half=False) -> None:
         self.weights = weights
         self.model = DetectMultiBackend(self.weights, device=torch.device(device), dnn=dnn, data=data, fp16=half)
@@ -47,7 +47,7 @@ class YOLOv9Extend():
             hide_labels=False,  # hide labels
             hide_conf=False,  # hide confidences
             vid_stride=1,  # video frame-rate stride
-    ):
+    ) -> list:
         source = str(source)
         save_img = not nosave and not source.endswith('.txt')  # save inference images
         is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
@@ -62,8 +62,6 @@ class YOLOv9Extend():
         (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
         # Load model
-        #device = select_device(device)
-        #model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
         stride, names, pt = self.model.stride, self.model.names, self.model.pt
         imgsz = check_img_size(imgsz, s=stride)  # check image size
 
@@ -82,6 +80,10 @@ class YOLOv9Extend():
         # Run inference
         self.model.warmup(imgsz=(1 if pt or self.model.triton else bs, 3, *imgsz))  # warmup
         seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
+        
+        # New: Initialize detections list
+        detections = []
+        
         for path, im, im0s, vid_cap, s in dataset:
             with dt[0]:
                 im = torch.from_numpy(im).to(self.model.device)
@@ -122,6 +124,10 @@ class YOLOv9Extend():
                 if len(det):
                     # Rescale boxes from img_size to im0 size
                     det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
+
+                    # New: Collect detections
+                    for d in det:
+                        detections.append(d.tolist())
 
                     # Print results
                     for c in det[:, 5].unique():
@@ -183,8 +189,14 @@ class YOLOv9Extend():
             LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
         if update:
             strip_optimizer(self.weights[0])  # update self.model (to fix SourceChangeWarning)
+        
+        return detections
 
 
 if __name__ == "__main__":
     model = YOLOv9Extend(weights='./weights/best.pt')
-    model.run(source='./datasets/clamp0032.jpg', imgsz=(1080, 1080))
+    result = model.run(source='./datasets/tools/images/clamp0032.jpg', imgsz=(2160, 2160), nosave=True)
+    print(result)
+    
+    result2 = model.run(source='./datasets/tools/images/tesoura0095.jpg', imgsz=(1080, 1080), nosave=True)
+    print(result2)
