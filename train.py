@@ -17,7 +17,7 @@ from torch.optim import lr_scheduler
 from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
-ROOT = FILE.parents[0]  # root directory
+ROOT = FILE.parents[0]  # YOLO root directory
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
@@ -30,22 +30,25 @@ from utils.autobatch import check_train_batch_size
 from utils.callbacks import Callbacks
 from utils.dataloaders import create_dataloader
 from utils.downloads import attempt_download, is_url
-from utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp, check_dataset, check_file, check_img_size,
-                           check_suffix, check_yaml, colorstr, get_latest_run, increment_path, init_seeds,
-                           intersect_dicts, labels_to_class_weights, labels_to_image_weights, methods,
-                           one_cycle, one_flat_cycle, print_args, print_mutation, strip_optimizer, yaml_save)
+from utils.general import (LOGGER, TQDM_BAR_FORMAT, check_amp, check_dataset, check_file, check_git_info,
+                           check_git_status, check_img_size, check_requirements, check_suffix, check_yaml, colorstr,
+                           get_latest_run, increment_path, init_seeds, intersect_dicts, labels_to_class_weights,
+                           labels_to_image_weights, methods, one_cycle, print_args, print_mutation, strip_optimizer,
+                           yaml_save, one_flat_cycle)
 from utils.loggers import Loggers
 from utils.loggers.comet.comet_utils import check_comet_resume
-from utils.loss_tal import ComputeLoss
+from utils.loss_tal_dual import ComputeLoss
+#from utils.loss_tal_dual import ComputeLossLH as ComputeLoss
+#from utils.loss_tal_dual import ComputeLossLHCF as ComputeLoss
 from utils.metrics import fitness
 from utils.plots import plot_evolve
-from utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP,
-                               smart_optimizer, smart_resume, torch_distributed_zero_first)
+from utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP, smart_optimizer,
+                               smart_resume, torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
 WORLD_SIZE = int(os.getenv('WORLD_SIZE', 1))
-GIT_INFO = None
+GIT_INFO = None#check_git_info()
 
 
 def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictionary
@@ -58,7 +61,6 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     w = save_dir / 'weights'  # weights dir
     (w.parent if evolve else w).mkdir(parents=True, exist_ok=True)  # make dir
     last, best = w / 'last.pt', w / 'best.pt'
-    last_striped, best_striped = w / 'last_striped.pt', w / 'best_striped.pt'
 
     # Hyperparameters
     if isinstance(hyp, str):
@@ -149,6 +151,15 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         lf = lambda x: 1.0
     else:
         lf = lambda x: (1 - x / epochs) * (1.0 - hyp['lrf']) + hyp['lrf']  # linear
+
+    # def lf(x):  # saw
+    #     return (1 - (x % 30) / 30) * (1 - x / epochs) * (1.0 - hyp['lrf']) + hyp['lrf']
+    #
+    # def lf(x):  # triangle start at min
+    #     return 2 * abs(x / 30 - math.floor(x / 30 + 1 / 2)) * (1 - x / epochs) * (1.0 - hyp['lrf']) + hyp['lrf']
+    #
+    # def lf(x):  # triangle start at max
+    #     return 2 * abs(x / 32 + .5 - math.floor(x / 32 + 1)) * (1 - x / epochs) * (1.0 - hyp['lrf']) + hyp['lrf']
 
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
     # from utils.plots import plot_lr_scheduler; plot_lr_scheduler(optimizer, scheduler, epochs)
@@ -399,10 +410,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         LOGGER.info(f'\n{epoch - start_epoch + 1} epochs completed in {(time.time() - t0) / 3600:.3f} hours.')
         for f in last, best:
             if f.exists():
-                if f is last:
-                    strip_optimizer(f, last_striped)  # strip optimizers
-                else:
-                    strip_optimizer(f, best_striped)  # strip optimizers
+                strip_optimizer(f)  # strip optimizers
                 if f is best:
                     LOGGER.info(f'\nValidating {f}...')
                     results, _, _ = validate.run(
@@ -433,8 +441,8 @@ def parse_opt(known=False):
     # parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
     parser.add_argument('--weights', type=str, default='', help='initial weights path')
     parser.add_argument('--cfg', type=str, default='yolo.yaml', help='model.yaml path')
-    parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='dataset.yaml path')
-    parser.add_argument('--hyp', type=str, default=ROOT / 'data/hyps/hyp.scratch-low.yaml', help='hyperparameters path')
+    parser.add_argument('--data', type=str, default=ROOT / 'data/coco.yaml', help='dataset.yaml path')
+    parser.add_argument('--hyp', type=str, default=ROOT / 'data/hyps/hyp.scratch-high.yaml', help='hyperparameters path')
     parser.add_argument('--epochs', type=int, default=100, help='total training epochs')
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs, -1 for autobatch')
     parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=640, help='train, val image size (pixels)')
@@ -483,6 +491,8 @@ def main(opt, callbacks=Callbacks()):
     # Checks
     if RANK in {-1, 0}:
         print_args(vars(opt))
+        #check_git_status()
+        #check_requirements()
 
     # Resume (from specified or most recent last.pt)
     if opt.resume and not check_comet_resume(opt) and not opt.evolve:
