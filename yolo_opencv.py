@@ -2,23 +2,11 @@ import cv2.dnn
 import numpy as np
 import yaml
 
-def draw_bounding_box(img, class_id, confidence, x, y, x_plus_w, y_plus_h, classes):
-    """
-    Draws bounding boxes on the input image based on the provided arguments.
-
-    Args:
-        img (numpy.ndarray): The input image to draw the bounding box on.
-        class_id (int): Class ID of the detected object.
-        confidence (float): Confidence score of the detected object.
-        x (int): X-coordinate of the top-left corner of the bounding box.
-        y (int): Y-coordinate of the top-left corner of the bounding box.
-        x_plus_w (int): X-coordinate of the bottom-right corner of the bounding box.
-        y_plus_h (int): Y-coordinate of the bottom-right corner of the bounding box.
-    """
+def draw_bounding_box(image, class_id, confidence, x_min, y_min, x_max, y_max, classes):
     label = f"{classes[class_id]} ({confidence:.2f})"
     color = colors[class_id]
-    cv2.rectangle(img, (x, y), (x_plus_w, y_plus_h), color, 2)
-    cv2.putText(img, label, (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    cv2.rectangle(image, (x_min, y_min), (x_max, y_max), color, 2)
+    cv2.putText(image, label, (x_min - 10, y_min - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
 
 def main(onnx_model, input_image, classes, show=False):
