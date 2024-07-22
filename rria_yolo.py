@@ -1,22 +1,21 @@
 import os
 import platform
 import sys
-from pathlib import Path
-
 import torch
 
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[0]  # YOLO root directory
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))  # add ROOT to PATH
-ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
-
+from pathlib import Path
 from models.common import DetectMultiBackend
 from utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadScreenshots, LoadStreams
 from utils.general import (LOGGER, Profile, check_file, check_img_size, check_imshow, colorstr, cv2,
                            increment_path, non_max_suppression, scale_boxes, strip_optimizer, xyxy2xywh)
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import smart_inference_mode
+
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[0]  # YOLO root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
+ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 class YOLOv9Extend:
     def __init__(self, weights, device = 'cpu', dnn=False, data=None, half=False) -> None:
@@ -194,9 +193,9 @@ class YOLOv9Extend:
 
 
 if __name__ == "__main__":
-    model = YOLOv9Extend(weights='./weights/best.pt')
-    result = model.run(source='./datasets/tools/images/clamp0032.jpg', imgsz=(2160, 2160), nosave=True)
+    model = YOLOv9Extend(weights='./weights/best.pt', device='0')
+    result = model.run(source='./datasets/tools/images/clamp0032.jpg', imgsz=(1088, 1088), nosave=True)
     print(result)
     
-    result2 = model.run(source='./datasets/tools/images/tesoura0095.jpg', imgsz=(1080, 1080), nosave=True)
+    result2 = model.run(source='./datasets/tools/images/tesoura0095.jpg', imgsz=(1088, 1088), nosave=True)
     print(result2)
