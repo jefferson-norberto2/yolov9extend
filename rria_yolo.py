@@ -193,9 +193,9 @@ class YOLOv9Extend:
 
 
 if __name__ == "__main__":
-    model = YOLOv9Extend(weights='./weights/best.pt', device='0')
+    model = YOLOv9Extend(weights='./weights/best_yolo_s.pt')
     result = model.run(source='./datasets/tools/images/clamp0032.jpg', imgsz=(1088, 1088), nosave=True)
     print(result)
     
-    result2 = model.run(source='./datasets/tools/images/tesoura0095.jpg', imgsz=(1088, 1088), nosave=True)
+    result2 = model.run(source='./datasets/luz_fria_frame_0000.png', imgsz=(1088, 1088), nosave=True)
     print(result2)

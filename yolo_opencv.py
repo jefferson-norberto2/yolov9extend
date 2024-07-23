@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     classes = dict_yaml["names"]
     colors = np.random.uniform(0, 255, size=(len(classes), 3))
-    d = main('./weights/best_yolo_s.onnx', './datasets/frame_37.jpg', classes)
+    d = main('./weights/best_yolo_s.onnx', './datasets/luz_fria_frame_0000.png', classes, show=True)
     print(d)
     
     # To export 
