@@ -67,7 +67,7 @@ def main(onnx_model, input_image, classes, show=False):
             class_ids.append(maxClassIndex)
 
     # Apply NMS (Non-maximum suppression)
-    result_boxes = cv2.dnn.NMSBoxes(boxes, scores, 0.25, 0.45, 0.5)
+    result_boxes = cv2.dnn.NMSBoxes(boxes, scores, 0.50, 0.45, 0.5)
 
     detections = []
 
@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     classes = dict_yaml["names"]
     colors = np.random.uniform(0, 255, size=(len(classes), 3))
-    d = main('./weights/best_yolo_s.onnx', './datasets/luz_fria_frame_0000.png', classes, show=True)
+    d = main('./weights/best_yolo_m.onnx', './datasets/frame_00.jpg', classes, show=True)
     print(d)
     
     # To export 
