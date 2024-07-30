@@ -1,0 +1,20 @@
+path: ./datasets/tools/
+train: train.txt  
+val: test.txt  
+test: test.txt  
+
+# Classes
+names:
+  0: Bisnaguinha
+  1: Cachorrinho
+  2: Clamp
+  3: Debakey
+  4: Grasper
+  5: Maryland
+  6: Tesoura
+
+# stuff names
+stuff_names: [
+  # unlabeled
+  'Tool'
+]
