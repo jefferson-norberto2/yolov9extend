@@ -64,7 +64,7 @@ class YOLOv9Extend:
 
         # Load model
         stride, names, pt = self.model.stride, self.model.names, self.model.pt
-        imgsz = check_img_size(imgsz, s=stride)  # check image size
+        imgsz = check_img_size(imgsz, s=stride, verbose=verbose)  # check image size
 
         # Dataloader
         bs = 1  # batch_size
@@ -180,7 +180,8 @@ class YOLOv9Extend:
                         vid_writer[i].write(im0)
 
             # Print time (inference-only)
-            LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
+            if verbose:
+                LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
 
         # Print results
         if verbose:
@@ -196,6 +197,6 @@ class YOLOv9Extend:
 
 
 if __name__ == "__main__":
-    model = YOLOv9Extend(weights='./weights/best_yolo_m.pt')
+    model = YOLOv9Extend(weights='./weights/best_yolo_m.pt', device=0)
     result = model.run(source='./data/images/all.jpg', imgsz=(1088, 1088), nosave=True)
     print(result)
