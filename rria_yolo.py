@@ -2,10 +2,11 @@ import os
 import platform
 import sys
 import torch
+import numpy as np
 
 from pathlib import Path
 from yolov9.models.common import DetectMultiBackend
-from yolov9.utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadScreenshots, LoadStreams
+from yolov9.utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadScreenshots, LoadStreams, LoadOpencvImage
 from yolov9.utils.general import (LOGGER, Profile, check_file, check_img_size, check_imshow, colorstr, cv2,
                            increment_path, non_max_suppression, scale_boxes, strip_optimizer, xyxy2xywh)
 from yolov9.utils.plots import Annotator, colors, save_one_box
@@ -16,6 +17,27 @@ ROOT = FILE.parents[0]  # YOLO root directory
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+
+def is_opencv_image(obj):
+    # Check if the object is a numpy array
+    if not isinstance(obj, np.ndarray):
+        return False
+    
+    # Check if the array has 2 or 3 dimensions
+    if obj.ndim not in [2, 3]:
+        return False
+    
+    # Check if the data type is an acceptable OpenCV image data type
+    if obj.dtype not in [np.uint8, np.float32, np.float64]:
+        return False
+    
+    # Check if the shape is consistent with an image
+    if obj.ndim == 3:
+        if obj.shape[2] not in [1, 3, 4]:
+            return False
+    
+    # If all checks pass, it is likely an OpenCV image
+    return True
 
 class YOLOv9Extend:
     def __init__(self, weights, device = 'cpu', dnn=False, data=None, half=False) -> None:
@@ -48,14 +70,15 @@ class YOLOv9Extend:
             vid_stride=1,  # video frame-rate stride
             verbose=True
     ) -> list:
-        source = str(source)
-        save_img = not nosave and not source.endswith('.txt')  # save inference images
-        is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
-        is_url = source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
-        webcam = source.isnumeric() or source.endswith('.txt') or (is_url and not is_file)
-        screenshot = source.lower().startswith('screen')
+        is_opencv = is_opencv_image(source)
+        source2 = str(source)
+        save_img = not nosave and not source2.endswith('.txt')  # save inference images
+        is_file = Path(source2).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
+        is_url = source2.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
+        webcam = source2.isnumeric() or source2.endswith('.txt') or (is_url and not is_file)
+        screenshot = source2.lower().startswith('screen')
         if is_url and is_file:
-            source = check_file(source)  # download
+            source2 = check_file(source2)  # download
 
         # Directories
         save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
@@ -68,14 +91,16 @@ class YOLOv9Extend:
 
         # Dataloader
         bs = 1  # batch_size
-        if webcam:
+        if is_opencv:
+            dataset = LoadOpencvImage(source, img_size=imgsz, stride=stride, auto=pt)
+        elif webcam:
             view_img = check_imshow(warn=True)
-            dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
+            dataset = LoadStreams(source2, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
             bs = len(dataset)
         elif screenshot:
-            dataset = LoadScreenshots(source, img_size=imgsz, stride=stride, auto=pt)
+            dataset = LoadScreenshots(source2, img_size=imgsz, stride=stride, auto=pt)
         else:
-            dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
+            dataset = LoadImages(source2, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
         vid_path, vid_writer = [None] * bs, [None] * bs
 
         # Run inference

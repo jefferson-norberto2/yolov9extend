@@ -234,6 +234,51 @@ class LoadScreenshots:
         return str(self.screen), im, im0, None, s  # screen, img, original img, im0s, s
 
 
+class LoadOpencvImage:
+    def __init__(self, img, img_size=640, stride=32, auto=True, transforms=None):
+        self.img = img
+        self.img_size = img_size
+        self.stride = stride
+        self.mode = 'image'
+        self.auto = auto
+        self.transforms = transforms  # optional
+        assert self.img is not None, f'Image can\'t be None'
+
+    def __iter__(self):
+        self.count = 0
+        return self
+
+    def __next__(self):
+        # Read image
+        self.count += 1
+        
+        if self.count > 1:
+            raise StopIteration
+        
+        im0 = self.img  # BGR
+
+        if self.transforms:
+            im = self.transforms(im0)  # transforms
+        else:
+            im = letterbox(im0, self.img_size, stride=self.stride, auto=self.auto)[0]  # padded resize
+            im = im.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+            im = np.ascontiguousarray(im)  # contiguous
+
+        return '', im, im0, None, ''
+
+    def _cv2_rotate(self, im):
+        # Rotate a cv2 video manually
+        if self.orientation == 0:
+            return cv2.rotate(im, cv2.ROTATE_90_CLOCKWISE)
+        elif self.orientation == 180:
+            return cv2.rotate(im, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        elif self.orientation == 90:
+            return cv2.rotate(im, cv2.ROTATE_180)
+        return im
+
+    def __len__(self):
+        return 1  # number of files
+
 class LoadImages:
     # YOLOv5 image/video dataloader, i.e. `python detect.py --source image.jpg/vid.mp4`
     def __init__(self, path, img_size=640, stride=32, auto=True, transforms=None, vid_stride=1):
