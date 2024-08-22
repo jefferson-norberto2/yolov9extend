@@ -224,4 +224,3 @@ class YOLOv9Extend:
 if __name__ == "__main__":
     model = YOLOv9Extend(weights='./weights/best_yolo_m.pt', device=0)
     result = model.run(source='./data/images/all.jpg', imgsz=(1088, 1088), nosave=True)
-    print(result)
