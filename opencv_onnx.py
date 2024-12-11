@@ -1,51 +1,36 @@
 import cv2.dnn
 import numpy as np
+from typing import List, Tuple, Dict
 
 class OpencvOnnx():
-    def __init__(self, onnx_path: str, classes: dict, model_image_size: tuple[int,int]):
+    def __init__(self, onnx_path: str, classes: dict, model_image_size: Tuple[int,int]):
         self.model = cv2.dnn.readNetFromONNX(onnx_path)
         self.classes = classes
         self.input_size = model_image_size
 
-    def detect(self, opencv_image, confidence=0.3, show=False):
+    def detect(self, opencv_image, confidence=0.3, show=False) -> List[Dict]:
         """
-            Detects objects in an image using a pre-trained model.
+        Detects objects in an image using a onnx pre-trained model.
 
-            This method takes an OpenCV image, processes it through a neural network model, 
-            and returns the detected objects as a list of dictionary. Optionally, the detections 
-            can be visualized on the input image.
+        This method takes an OpenCV image, processes it through a neural network model, 
+        and returns the detected objects as a list of dictionary. Optionally, the detections 
+        can be visualized on the input image.
 
-            Parameters:
-                opencv_image (numpy.ndarray): 
-                    The input image in OpenCV format (BGR) for object detection.
-                
-                classes (dict): 
-                    A dictionary mapping class IDs to class names. Example {0: 'Car', 1: 'Person'}.
+        Args:
+            opencv_image (numpy.ndarray):  The input image in OpenCV format (BGR) for object detection.
+            confidence (float, optional): The confidence threshold for filtering out weak detections. Defaults to 0.3.
+            show (bool, optional): If True, the method will display the image with the detected objects drawn on it. 
+            Defaults to False.
 
-                confidence (float, optional): 
-                    The confidence threshold for filtering out weak detections. 
-                    Only detections with confidence scores above this threshold will be included. 
-                    Defaults to 0.3.
-                
-                model_image_size (tuple[int, int]):
-                    A tuple that define input size of model, defined by widht and heigth from image
-                    in pixels.
-
-                show (bool, optional): 
-                    If True, the method will display the image with the detected objects drawn on it.
-                    Defaults to False.
-
-            Returns:
-                List of dict: 
-                    A list of dictionary, containing the detected objects. 
+        Returns:
+            List[Dict]: A list of dictionary, containing the detected objects. 
                     The structure defined is:
-                    "class_id": int number of class,
-                    "class_name": string name from class,
-                    "confidence": float score of detection,
-                    "bbox_n": bounding box containg x_min, y_min, widht and heigth normalized between 
+                    `class_id`: int number of class,
+                    `class_name`: string name from class,
+                    `confidence`: float score of detection,
+                    `bbox_n`: bounding box containg x_min, y_min, widht and heigth normalized between 
                     0 and 1.
-            """
-
+        """
         # Make a blob image
         blob = self._preprocess_image(opencv_image)
 
@@ -130,7 +115,7 @@ class OpencvOnnx():
                 bbox = bboxes[result]
                 bbox_n = np.array(bbox) / size_inference[0]
                 detection = {
-                    "class_id": class_ids[result],
+                    "class_id": int(class_ids[result]),
                     "class_name": self.classes[class_ids[result]],
                     "confidence": scores[result],
                     "bbox_n": bbox_n,
