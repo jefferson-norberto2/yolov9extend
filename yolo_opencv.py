@@ -11,6 +11,48 @@ class OpencvOnnx():
         self.model = cv2.dnn.readNetFromONNX(onnx_path)
 
     def detect(self, opencv_image, classes: dict, confidence=0.3, show=False):
+        """
+            Detects objects in an image using a pre-trained model.
+
+            This method takes an OpenCV image, processes it through a neural network model, 
+            and returns the detected objects as a list of dictionary. Optionally, the detections 
+            can be visualized on the input image.
+
+            Parameters:
+                opencv_image (numpy.ndarray): 
+                    The input image in OpenCV format (BGR) for object detection.
+                
+                classes (dict): 
+                    A dictionary mapping class IDs to class names. Example {0: 'Car', 1: 'Person'}.
+
+                confidence (float, optional): 
+                    The confidence threshold for filtering out weak detections. 
+                    Only detections with confidence scores above this threshold will be included. 
+                    Defaults to 0.3.
+
+                show (bool, optional): 
+                    If True, the method will display the image with the detected objects drawn on it.
+                    Defaults to False.
+
+            Returns:
+                List of dict: 
+                    A list of dictionary, containing the detected objects. The structure defined 
+                    is:
+                    "class_id": string number of class,
+                    "class_name": string name from class,
+                    "confidence": float score of detection,
+                    "bbox": bounding box containg x_min, y_min, widht and heigth in pixels,
+                    "bbox_n": bounding box containg x_min, y_min, widht and heigth normalized between 0 and 1,
+                    "scale": scale factor from detection.
+
+            Notes:
+                - The method internally resizes the input image to `(1088, 1088)` for inference.
+                - The `_preprocess_image` method creates a blob for the input image and computes the scale.
+                - The `_postprocess_outputs` method extracts relevant results from the model's output.
+                - The `_make_dicitionary_detections` method formats the detections into a structured dictionary.
+                - If `show` is set to True, the `_show_detections` method is used to display the image with drawn detections.
+            """
+
         # Make a blob image and take scale
         size_inference=(1088, 1088)
         blob, scale = self._preprocess_image(opencv_image, size=size_inference)
