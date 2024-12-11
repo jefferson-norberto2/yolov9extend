@@ -7,6 +7,7 @@ from sklearn.metrics import ConfusionMatrixDisplay
 import os
 
 from opencv_onnx import OpencvOnnx
+from onnx_yolo import OnnxYolo
 
 def get_max_confidence(detections: list):
     max_confidence = 0
@@ -85,8 +86,9 @@ if __name__ == "__main__":
 
     classes = dict_yaml['names']
     input_size = (1088, 1088)
-    model = OpencvOnnx(model_path, classes, input_size)
-    validation(model, dict_yaml)
+    # model = OpencvOnnx(model_path, classes, input_size)
+    model = OnnxYolo(model_path, classes)
+    validation(model, dict_yaml, output_path="./runs/val/onnx_yolo")
     
     # To export 
     # python .\export.py --data ./datasets/tools/tools.yaml --weights ./weights/best_yolo_s.pt --imgsz (1088, 1088) --include onnx                                                 
