@@ -1,5 +1,6 @@
 weights/
 datasets/
+dataset/
 runs/
-
+*/coco/*
 __pycache__
